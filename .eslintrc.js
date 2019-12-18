@@ -38,6 +38,7 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'global-require': 'off',
     camelcase: 'off',
+    'react/jsx-props-no-spreading':0,
     'no-console': ['error', { allow: ['tron'] }]
   },
 };
