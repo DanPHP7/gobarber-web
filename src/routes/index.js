@@ -9,10 +9,10 @@ import Profile from '../pages/Profile';
 export default function Routes() {
   return (
     <Switch>
-      <Route patgh="/" exact component={SignIn} />
-      <Route patgh="/register" component={SignUp} />
-      <Route patgh="/dashboard" component={Dashboard} />
-      <Route patgh="/profile" component={Profile} />
+      <Route path="/" exact component={SignIn} />
+      <Route path="/register" component={SignUp} isPrivate />
+      <Route path="/dashboard" component={Dashboard} isPrivate />
+      <Route path="/profile" component={Profile} isPrivate />
     </Switch>
   );
 }
