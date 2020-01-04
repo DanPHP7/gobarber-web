@@ -11,6 +11,11 @@ ou:
 ```bash
 npm i
 ```
+Instale as sequintes dependências:
+
+```bash
+yarn add redux redux-saga react-redux reactotron-redux reactotron-redux-saga immer axios
+```
 
 
 # Redux & Redux SAGA
@@ -20,11 +25,7 @@ Um instrudução da configuração incial do `redux`, `redux-saga` & `Reactotron
 
 ## Configuração
 
-Instale as sequintes dependências:
 
-```bash
-yarn add redux redux-saga react-redux reactotron-redux reactotron-redux-saga immer
-```
 
 O promeiro passo após a instação das dependências é criar o esquemas de pastas
 do `Redux`, abaixo vou listar a `tree` da configuração de pastas do `Redux` &
@@ -235,3 +236,101 @@ export default App;
 ```
 
 > É importante ficar atento a uma questão, o `import` do `store`, deve vir depois da importação da configuração do `Reactotron` para que ele tenha acesso as funções para realizarmos o `Debug` pelo `Reactotron`.
+
+Agora vamos criar as actions de autenticação.
+
+Edite o arquivo `src/modules/auth/actions.js`.
+
+```jsx
+export function signInRequest(email, password) {
+  return {
+    type: '@auth/SIGN_IN_REQUEST',
+    payload: { email, password },
+  };
+}
+
+export function signInSuccess(token, user) {
+  return {
+    type: '@auth/SIGN_IN_SUCCESS',
+    payload: { token, user },
+  };
+}
+
+export function signFailure() {
+  return {
+    type: '@auth/SIGN_FAILURE',
+  };
+}
+// src/modules/auth/actions.js
+```
+
+Aqui criamos 3 `actions` base para configuramos a autenticação da nossa aplicação com o `Redux`.
+
+Antes de prosseguir com a configuração do `Saga` de autenticação, vamos configurar o `service` de API.
+
+Dentro da pasta `src/services` crie um arquivo chamado `api.js`.
+
+```bash
+touch src/services/api.js
+```
+Agora, edite o arquivo `api.js` e deixe-o exatamente assim:
+
+```jsx
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:4000',
+});
+
+export default api;
+
+// src/services/api.js
+```
+
+Agora vamos configurar o `Saga` de autenticação, edite o arquivo `src/store/modules/auth/sagas.js`.
+
+```jsx
+import { takeLatest, call, put, all } from 'redux-saga/effects';
+
+import api from '~/services/api';
+import history from '~/services/history';
+
+import { signInSuccess } from './actions';
+
+export function* signIn({ payload }) {
+  const { email, password } = payload;
+
+  const response = yield call(api.post, 'sessions', {
+    email,
+    password,
+  });
+
+  const { token, user } = response.data;
+
+  if (!user.provider) {
+    console.tron.error('Usuário não é provider');
+    return;
+  }
+  yield put(signInSuccess(token, user));
+
+  history.push('/dashboard');
+}
+
+export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+
+
+// src/store/modules/auth/sagas.js
+
+```
+Feito isso, dentro do seu componente de `Login`, você deve importar a `function`, `useDispatch()` do pacote `react-redux`, e a action de request para o Login, que nós cahamamos de `signInRequest()`, e colocando a action dentro da função `useDispatch()` e passando seus respectivos parâmetros dessa forma:
+
+
+```jsx
+const dispatch = useDispatch();
+
+function handleSubmit({email, password}){
+
+  dispatch(signInRequest(email, password))
+
+}
+```
