@@ -454,7 +454,10 @@ function App() {
 export default App;
 
 ```
+
+
 #### 2
+
 ***src/routes/Route.js***
 
 ```jsx
@@ -506,4 +509,97 @@ RouteWrapper.defaultProps = {
   isPrivate: false,
 };
 
+```
+
+## Loading
+
+Agora vamos configurar o `loading` da autenticação.
+
+Vamos editar o arquivo `src/store/modules/auth/reducer.js`, deixe-o assim:
+
+```jsx
+import produce from 'immer';
+
+const INTIAL_STATE = {
+  token: null,
+  signed: false,
+  loading: false,
+};
+export default function auth(state = INTIAL_STATE, action) {
+  return produce(state, draft => {
+    switch (action.type) {
+      case '@auth/SIGN_IN_REQUEST': {
+        draft.loading = true;
+        break;
+      }
+      case '@auth/SIGN_IN_SUCCESS': {
+        draft.token = action.payload.token;
+        draft.signed = true;
+        draft.loading = false;
+
+        break;
+      }
+      case '@auth/SIGN_FAILURE': {
+        draft.loading = false;
+        break;
+      }
+
+      default:
+        return state;
+    }
+  });
+}
+// src/store/modules/auth/reducer.js
+```
+
+Aqui fizemos um Switch báisoc pra alternar de acordo com a resposta da nossa action.
+
+Temos que modificar também nosso saga de autenticação, edite o arquivo `src/store/modules/auth/sagas.js`, deixe-o dessa forma:
+
+```jsx
+import { takeLatest, call, put, all } from 'redux-saga/effects';
+
+import api from '~/services/api';
+import history from '~/services/history';
+
+import { signInSuccess, signFailure } from './actions';
+
+export function* signIn({ payload }) {
+  try {
+    const { email, password } = payload;
+
+    const response = yield call(api.post, 'sessions', {
+      email,
+      password,
+    });
+
+    const { token, user } = response.data;
+
+    if (!user.provider) {
+      console.tron.error('Usuário não é provider');
+      return;
+    }
+    yield put(signInSuccess(token, user));
+
+    history.push('/dashboard');
+  } catch (error) {
+    yield put(signFailure());
+  }
+}
+
+export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+// src/store/modules/auth/sagas.js
+```
+
+Aqui nós colocamos um `try/catch` por volta da nossa chamada a `API`, se cai no erro importamos a action de `signFailure()` para executar ela.
+
+
+Para que possamos utilizar a variavel de Loading que fica dentro do nosso Reducer de Autenticação, devemos importar o metodo `useSelector()`, e acessar nosso reducer de autenticação até nossa varivel `loading` qu foi declarada no nosso reducer.
+
+ex:
+
+```jsx
+import { useSelector} from 'react-redux';
+
+const loading = useSelector(state => state.auth.loading)
 ```
