@@ -322,7 +322,7 @@ export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
 // src/store/modules/auth/sagas.js
 
 ```
-Feito isso, dentro do seu componente de `Login`, você deve importar a `function`, `useDispatch()` do pacote `react-redux`, e a action de request para o Login, que nós cahamamos de `signInRequest()`, e colocando a action dentro da função `useDispatch()` e passando seus respectivos parâmetros dessa forma:
+Feito isso, dentro do seu componente de `Login`, você deve importar a `function`, `useDispatch()` do pacote `react-redux`, e a action de request para o Login, que nós cahamamos de `signInRequest()`, e colocando a action por volta da função `useDispatch()` e passando seus respectivos parâmetros dessa forma:
 
 
 ```jsx
@@ -333,4 +333,177 @@ function handleSubmit({email, password}){
   dispatch(signInRequest(email, password))
 
 }
+```
+> Este é um exemplo genérico de como deve ser feito.
+
+Agora vamos configurar o `reducer` de autenticação, edite o arquivo  `src/store/modules/auth/reducer.js`, deixe-o dessa forma.
+
+```jsx
+import produce from 'immer';
+
+const INTIAL_STATE = {
+  token: null,
+  signed: false,
+  loading: false,
+};
+export default function auth(state = INTIAL_STATE, action) {
+  switch (action.type) {
+    case '@auth/SIGN_IN_SUCCESS':
+      return produce(state, draft => {
+        draft.token = action.payload.token;
+        draft.signed = true;
+      });
+    default:
+      return state;
+  }
+}
+
+```
+> Um `Reducer` sempre pode ouvir todas as actions de todos os outros modules.
+
+## Persistindo dados com Redux
+
+Agora vamos instalar uma lib pra que possamos persistir os dados do usuário, mesmo quando ele dar um refresh(`F5`) na página.
+
+```bash
+yarn add redux-persist
+```
+
+Na pasta `src/store`, crie um arquivo com o nome `persistReducer.js`, deixe-o dessa forma:
+
+```jsx
+import storage from 'redux-persist/lib/storage';
+import { persistReducer } from 'redux-persist';
+
+export default reducers => {
+  const persistedReducer = persistReducer(
+    {
+      key: 'gobarber',
+      storage,
+      whitelist: ['auth', 'user'],
+    },
+    reducers
+  );
+  return persistedReducer;
+};
+
+```
+
+Aqui eu especifiquei os modules que terão seus dados persistidos na aplicação dentro da minha `key`=> `whitelist`, se você não quer que um module tenha seus dados ṕersistindo na aplicação, simplesmente deixe-o de fora do `array` da `key`=>`whitelist`.
+
+Agora, vamos modificar o arquivo `src/store/index.js`, deixe-o dessa forma:
+
+```jsx
+import { persistStore } from 'redux-persist';
+import createSagaMiddleware from 'redux-saga';
+
+import createStore from './createStore';
+import persistReducer from './persistReducer';
+import rootReducer from './modules/rootReducer';
+import rootSaga from './modules/rootSaga';
+
+const sagaMonitor =
+  process.env.NODE_ENV === 'development'
+    ? console.tron.createSagaMonitor()
+    : null;
+
+const sagaMiddleware = createSagaMiddleware({ sagaMonitor });
+
+const middlewares = [sagaMiddleware];
+
+const store = createStore(persistReducer(rootReducer), middlewares);
+const persistor = persistStore(store);
+sagaMiddleware.run(rootSaga);
+
+export { store, persistor };
+// src/store/index.js
+```
+
+
+Como nós modificamos  a importação da varável `store` nos temos que mudar em todos os locais onde nos importamos ela como `default`,para que a aplicação não quebre.
+
+#### 1
+
+***src/App.js***
+
+```jsx
+import React from 'react';
+import { PersistGate } from 'redux-persist/integration/react';
+import { Provider } from 'react-redux';
+import { Router } from 'react-router-dom';
+import './config/ReactotronConfig';
+import Routes from './routes';
+import history from './services/history';
+import GlobalStyles from './styles/global';
+
+import { store, persistor } from './store';
+
+function App() {
+  return (
+    <Provider store={store}>
+      <PersistGate persistor={persistor}>
+        <Router history={history}>
+          <GlobalStyles />
+          <Routes />
+        </Router>
+      </PersistGate>
+    </Provider>
+  );
+}
+
+export default App;
+
+```
+#### 2
+***src/routes/Route.js***
+
+```jsx
+import React from 'react';
+
+import { Route, Redirect } from 'react-router-dom';
+import PropTypes from 'prop-types';
+
+import AuthLayout from '~/pages/_layouts/auth';
+import DefaultLayout from '~/pages/_layouts/default';
+
+import { store } from '~/store';
+
+export default function RouteWrapper({
+  component: Component,
+  isPrivate,
+  ...rest
+}) {
+  // importando store temos acesso a todos os modulos atravez da função getState();
+  const { signed } = store.getState().auth;
+
+  if (!signed && isPrivate) {
+    return <Redirect to="/" />;
+  }
+
+  if (signed && !isPrivate) {
+    return <Redirect to="/dashboard" />;
+  }
+  const Layout = signed ? DefaultLayout : AuthLayout;
+  return (
+    <Route
+      {...rest}
+      render={props => (
+        <Layout>
+          <Component {...props} />
+        </Layout>
+      )}
+    />
+  );
+}
+
+RouteWrapper.propTypes = {
+  isPrivate: PropTypes.bool,
+  component: PropTypes.oneOfType([PropTypes.element, PropTypes.func])
+    .isRequired,
+};
+
+RouteWrapper.defaultProps = {
+  isPrivate: false,
+};
+
 ```
