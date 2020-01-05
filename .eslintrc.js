@@ -37,6 +37,7 @@ module.exports = {
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
     'global-require': 'off',
+    'no-underscore-dangle': 0,
     camelcase: 'off',
     'react/jsx-props-no-spreading':0,
     'no-console': ['error', { allow: ['tron'] }]
