@@ -87,6 +87,7 @@ export const Notification = styled.div`
         width: 8px;
         height: 8px;
         background: #ff892e;
+        /* border: 2px solid #fff; */
         border-radius: 50%;
         margin-left: 10px;
       }

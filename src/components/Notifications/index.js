@@ -24,7 +24,7 @@ export default function Notifications() {
     [notifications]
   );
   const user = useSelector(state => state.user.profile);
-
+  // socket connections
   const socket = useMemo(
     () =>
       socketio('http://localhost:4000', {
@@ -35,6 +35,7 @@ export default function Notifications() {
     [user.id]
   );
 
+  // monitoring events of notifications
   useEffect(() => {
     socket.on('notification', notification => {
       setNotifications([notification, ...notifications]);
@@ -58,7 +59,7 @@ export default function Notifications() {
           setNotifications(notification);
         }
       } catch (error) {
-        toast.error('Não foi possível buscar as notificações.');
+        toast.success('Sem nenhuma notificação.');
       }
     }
     loadNotifications();
